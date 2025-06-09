@@ -72,7 +72,7 @@ const loginController = async (req, res) => {
 const forgetPasswordController = () => {};
 const resetPasswordController = () => {};
 
-export {
+module.exports = {
   signupController,
   loginController,
   forgetPasswordController,
