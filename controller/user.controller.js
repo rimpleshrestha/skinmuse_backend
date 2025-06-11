@@ -39,7 +39,11 @@ const signupController = async (req, res) => {
       .cookie("refreshToken", refreshToken, cookiesOptions)
       .cookie("accessToken", accessToken, cookiesOptions)
       .status(201)
-      .json({ message: "User Created Successfully", result: user });
+      .json({
+        message: "User Created Successfully",
+
+        accessToken: accessToken,
+      });
   } catch (error) {
     console.log("error during signup", error);
     res.status(500).json({ message: "Internal Server Error During Signup" });
@@ -66,7 +70,7 @@ const loginController = async (req, res) => {
       .cookie("refreshToken", refreshToken, cookiesOptions)
       .cookie("accessToken", accessToken, cookiesOptions)
       .status(200)
-      .json({ message: "Login Successfull", result: user });
+      .json({ message: "Login Successfull", accessToken: accessToken });
   } catch (error) {
     console.log("error during login", error);
     res.status(500).json({ message: "Internal Server Error During Login" });
