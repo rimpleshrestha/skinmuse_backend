@@ -15,9 +15,9 @@ const generateRefreshToken = (body) => {
   return token;
 };
 const cookiesOptions = {
-  httpOnly: true,
-  secure: true,
-  sameSite: "none",
+  // httpOnly: true,
+  // secure: true,
+  // sameSite: "none",
   maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
 };
-module.exports =  { generateJWTToken, generateRefreshToken, cookiesOptions };
+module.exports = { generateJWTToken, generateRefreshToken, cookiesOptions };

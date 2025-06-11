@@ -8,10 +8,15 @@ const {
 const signupController = async (req, res) => {
   try {
     console.log(req.body);
-    const { email, password, name } = req.body;
-    console.log(email, password, name);
-    if ([email, password, name].some((field) => field.trim("") === "")) {
+    const { email, password, confirm_password } = req.body;
+    console.log(email, password, confirm_password);
+    if (
+      [email, password, confirm_password].some((field) => field.trim("") === "")
+    ) {
       return res.status(400).json({ message: "All fields are required" });
+    }
+    if (password !== confirm_password) {
+      return res.status(400).json({ message: "Password dont match" });
     }
     const userExists = await User.findOne({ email });
     if (userExists) {
@@ -21,7 +26,6 @@ const signupController = async (req, res) => {
     const user = await User.create({
       email,
       password: encryptedPassword,
-      name,
     });
     if (!user) {
       return res
