@@ -88,13 +88,67 @@ const loginController = async (req, res) => {
   }
 };
 
-// TODO: add nodemailer here too
-const forgetPasswordController = () => {};
-const resetPasswordController = () => {};
+const changePasswordController = async (req, res) => {
+  try {
+    const { email, old_password, new_password, confirm_password } = req.body;
+    console.log(email, old_password, new_password, confirm_password);
+    if (
+      [email, old_password, new_password, confirm_password].some(
+        (field) => field.trim() == ""
+      )
+    ) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    if (new_password !== confirm_password) {
+      return res.status(400).json({ message: "New passwords don't match" });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: "User not found" });
+    }
+
+    const isOldPasswordValid = await comparePassword(
+      old_password,
+      user.password
+    );
+    if (!isOldPasswordValid) {
+      return res.status(400).json({ message: "Old password is incorrect" });
+    }
+
+    const encryptedNewPassword = await encryptPassword(new_password);
+    user.password = encryptedNewPassword;
+    await user.save();
+
+    return res.status(200).json({ message: "Password changed successfully" });
+  } catch (error) {
+    console.log("error during password change", error);
+    res
+      .status(500)
+      .json({ message: "Internal Server Error During Password Change" });
+  }
+};
+
+const deleteUserController = async (req, res) => {
+  try {
+    const deletedUser = await User.findOneAndDelete({ _id: req.user });
+    if (!deletedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({ message: "User deleted successfully" });
+  } catch (error) {
+    console.log("error during user deletion", error);
+    res
+      .status(500)
+      .json({ message: "Internal Server Error During User Deletion" });
+  }
+};
 
 module.exports = {
   signupController,
   loginController,
-  forgetPasswordController,
-  resetPasswordController,
+  changePasswordController,
+  deleteUserController,
 };
