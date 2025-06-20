@@ -12,12 +12,12 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.static("public"));
 app.use(cookieParser());
 const userRouter = require("./routes/user.route.js");
+const postRouter = require("./routes/post.route.js");
+const commentRouter = require("./routes/comment.route.js");
 
 app.use("/api", userRouter);
+app.use("/api/post", postRouter);
+app.use("/api/comment", commentRouter);
 app.listen(process.env.PORT || 5000, () => {
   console.log(`Server running on port ${process.env.PORT || 5000}`);
-});
-
-app.get("/", (req, res) => {
-  res.status(200).send("Hello World");
 });
