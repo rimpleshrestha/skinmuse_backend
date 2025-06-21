@@ -81,7 +81,12 @@ const loginController = async (req, res) => {
       .cookie("refreshToken", refreshToken, cookiesOptions)
       .cookie("accessToken", accessToken, cookiesOptions)
       .status(200)
-      .json({ message: "Login Successful", accessToken: accessToken });
+      .json({
+        message: "Login Successful",
+        accessToken: accessToken,
+        userRole: user.role,
+        email: user.email,
+      });
   } catch (error) {
     console.log("error during login", error);
     res.status(500).json({ message: "Internal Server Error During Login" });
@@ -90,10 +95,10 @@ const loginController = async (req, res) => {
 
 const changePasswordController = async (req, res) => {
   try {
-    const { email, old_password, new_password, confirm_password } = req.body;
-    console.log(email, old_password, new_password, confirm_password);
+    const { email, new_password, confirm_password } = req.body;
+    console.log(email, new_password, confirm_password);
     if (
-      [email, old_password, new_password, confirm_password].some(
+      [email, new_password, confirm_password].some(
         (field) => field.trim() == ""
       )
     ) {
@@ -107,14 +112,6 @@ const changePasswordController = async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ message: "User not found" });
-    }
-
-    const isOldPasswordValid = await comparePassword(
-      old_password,
-      user.password
-    );
-    if (!isOldPasswordValid) {
-      return res.status(400).json({ message: "Old password is incorrect" });
     }
 
     const encryptedNewPassword = await encryptPassword(new_password);
@@ -146,9 +143,39 @@ const deleteUserController = async (req, res) => {
   }
 };
 
+const updateUserNameController = async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name || name.trim() === "") {
+      return res.status(400).json({ message: "Name is required" });
+    }
+
+    const user = await User.findOneAndUpdate(
+      { _id: req.user },
+      { name },
+      { new: true, runValidators: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({
+      message: "User name updated successfully",
+      user,
+    });
+  } catch (error) {
+    console.log("error during updating user name", error);
+    res
+      .status(500)
+      .json({ message: "Internal Server Error During User Name Update" });
+  }
+};
+
 module.exports = {
   signupController,
   loginController,
   changePasswordController,
   deleteUserController,
+  updateUserNameController,
 };
