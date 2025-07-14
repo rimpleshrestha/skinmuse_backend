@@ -1,5 +1,5 @@
-// controllers/commentController.js
 const Comment = require("../model/comment.model.js");
+
 async function createComment(req, res) {
   try {
     const { comment } = req.body;
@@ -21,7 +21,7 @@ async function getAllComments(req, res) {
   try {
     const userId = req.user;
     const comments = await Comment.find({ user: userId })
-      .populate("user", "username email")
+      .populate("user", "name email")
       .populate("post", "title");
     return res.json(comments);
   } catch (err) {
@@ -37,7 +37,7 @@ async function getCommentById(req, res) {
   try {
     const userId = req.user;
     const comment = await Comment.findOne({ _id: req.params.id, user: userId })
-      .populate("user", "username email")
+      .populate("user", "name email")
       .populate("post", "title");
     if (!comment) {
       return res.status(404).json({ message: "Comment not found" });
@@ -97,10 +97,29 @@ async function deleteComment(req, res) {
   }
 }
 
+// New function to get comments by post ID
+async function getCommentsByPost(req, res) {
+  try {
+    const postId = req.params.postId;
+    // Populate with 'name' to get the user’s actual name
+    const comments = await Comment.find({ post: postId }).populate(
+      "user",
+      "name"
+    );
+    return res.json(comments);
+  } catch (err) {
+    console.error("Error fetching comments by post:", err);
+    return res
+      .status(500)
+      .json({ message: "Server error while fetching comments" });
+  }
+}
+
 module.exports = {
   createComment,
   getAllComments,
   getCommentById,
   updateComment,
   deleteComment,
+  getCommentsByPost,
 };

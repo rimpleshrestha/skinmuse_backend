@@ -17,7 +17,7 @@ const commentRouter = require("./routes/comment.route.js");
 
 app.use("/api", userRouter);
 app.use("/api/post", postRouter);
-app.use("/api/comment", commentRouter);
+app.use("/api/comments", commentRouter);
 app.listen(process.env.PORT || 5000, () => {
   console.log(`Server running on port ${process.env.PORT || 5000}`);
 });
