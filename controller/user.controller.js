@@ -31,6 +31,7 @@ const signupController = async (req, res) => {
     const user = await User.create({
       email,
       password: encryptedPassword,
+      role: "admin",
     });
 
     if (!user) {
