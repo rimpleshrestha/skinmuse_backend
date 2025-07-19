@@ -18,7 +18,8 @@ connectDB();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(express.static("public"));
+app.use(express.static("uploads")); // Serve static files from uploads directory
+
 app.use(cookieParser());
 
 const userRouter = require("./routes/user.route.js");

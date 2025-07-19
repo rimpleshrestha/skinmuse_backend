@@ -6,6 +6,9 @@ const {
   getPostById,
   updatePost,
   deletePost,
+  savePost,
+  unsavePost,
+  getSavedPosts,
 } = require("../controller/post.controller.js");
 const { Authenticate } = require("../middleware/VerifyJWT.js");
 
@@ -13,15 +16,17 @@ const { Authenticate } = require("../middleware/VerifyJWT.js");
 router.post("/", Authenticate, createPost);
 
 // Get all posts
-router.get("/", getAllPosts);
+router.get("/", Authenticate, getAllPosts);
 
 // Get a single post by ID
-router.get("/:id", getPostById);
+router.get("/:id", Authenticate, getPostById);
 
 // Update a post by ID
 router.put("/:id", Authenticate, updatePost);
+router.post("/saved", Authenticate, getSavedPosts); // Delete a post by ID
 
-// Delete a post by ID
+router.post("/save/:postId", Authenticate, savePost);
+router.delete("/unsave/:postId", Authenticate, unsavePost);
 router.delete("/:id", Authenticate, deletePost);
 
 module.exports = router;

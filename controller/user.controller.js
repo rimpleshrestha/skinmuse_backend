@@ -1,5 +1,6 @@
 const User = require("../model/user.model.js");
 const { comparePassword, encryptPassword } = require("../utils/bcrypt.js");
+const { uploadImageToCloudinary } = require("../utils/cloudinary.js");
 const {
   generateJWTToken,
   generateRefreshToken,
@@ -31,7 +32,6 @@ const signupController = async (req, res) => {
     const user = await User.create({
       email,
       password: encryptedPassword,
-      role: "admin",
     });
 
     if (!user) {
@@ -86,6 +86,8 @@ const loginController = async (req, res) => {
         message: "Login Successful",
         accessToken: accessToken,
         userRole: user.role,
+        avatar: user.avatar,
+        name: user.name,
         email: user.email,
       });
   } catch (error) {
@@ -172,11 +174,43 @@ const updateUserNameController = async (req, res) => {
       .json({ message: "Internal Server Error During User Name Update" });
   }
 };
+const updateProfileImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+    console.log("File received:", req.file);
+    const imageUrl = await uploadImageToCloudinary(req.file.path);
+    if (!imageUrl) {
+      return res.status(500).json({ message: "Failed to upload image" });
+    }
+    console.log("Image URL:", imageUrl);
+    const user = await User.findByIdAndUpdate(
+      req.user,
+      { avatar: imageUrl.url },
+      { new: true, runValidators: true }
+    );
 
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({
+      message: "Profile image updated successfully",
+      user,
+    });
+  } catch (error) {
+    console.log("error during updating profile image", error);
+    res
+      .status(500)
+      .json({ message: "Internal Server Error During Profile Image Update" });
+  }
+};
 module.exports = {
   signupController,
   loginController,
   changePasswordController,
   deleteUserController,
   updateUserNameController,
+  updateProfileImage,
 };
