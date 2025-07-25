@@ -25,10 +25,14 @@ app.use(cookieParser());
 const userRouter = require("./routes/user.route.js");
 const postRouter = require("./routes/post.route.js");
 const commentRouter = require("./routes/comment.route.js");
+const userRatingRoutes = require("./routes/userRating.route.js");
+
 
 app.use("/api", userRouter);
 app.use("/api/post", postRouter);
 app.use("/api/comments", commentRouter);
+app.use("/api/user", userRatingRoutes);
+
 
 // Export app for testing
 module.exports = app;
