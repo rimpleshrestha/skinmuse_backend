@@ -133,4 +133,94 @@ describe("User Controller Tests", () => {
     expect(res.body.message).toBe("User name updated successfully");
     expect(res.body.user.name).toBe("Ri");
   });
+
+ 
+  it("should return 404 for unknown route", async () => {
+    const res = await request(app).get("/api/unknownroute");
+    expect(res.statusCode).toBe(404);
+  });
+
+  it("should not allow duplicate email during signup", async () => {
+    const res = await request(app).post("/api/signup").send({
+      email: uniqueEmail,
+      password: "password123",
+      confirm_password: "password123",
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.body.message).toBe("Email is Taken");
+  });
+
+  it("should fail to update username with empty name", async () => {
+    const res = await request(app)
+      .put("/api/update-details")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "" });
+    expect(res.statusCode).toBe(400);
+    expect(res.body.message).toBe("Name is required");
+  });
+
+  it("should fail to update profile image without file upload", async () => {
+    const res = await request(app)
+      .put("/api/update-profile-image")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.statusCode).toBe(400);
+    expect(res.body.message).toBe("No file uploaded");
+  });
+
+  it("should fail to update profile image without auth token", async () => {
+    const res = await request(app)
+      .put("/api/update-profile-image")
+      .attach("pfp", Buffer.from("fake-image"), "test.png");
+    expect(res.statusCode).toBe(401);
+    expect(res.body.message).toBe("Unauthorized");
+  });
+
+  it("should delete user successfully", async () => {
+    const res = await request(app)
+      .delete("/api/delete-user")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.statusCode).toBe(200);
+    expect(res.body.message).toBe("User deleted successfully");
+  });
+
+  it("should fail to delete user without authorization", async () => {
+    const res = await request(app).delete("/api/delete-user");
+    expect(res.statusCode).toBe(401);
+    expect(res.body.message).toBe("Unauthorized");
+  });
+
+  it("should return 401 for invalid token when updating username", async () => {
+    const res = await request(app)
+      .put("/api/update-details")
+      .set("Authorization", "Bearer invalid.token")
+      .send({ name: "InvalidToken" });
+    expect(res.statusCode).toBe(401);
+    expect(res.body.message).toBe("Unauthorized");
+  });
+
+  it("should not update username for non-existent user", async () => {
+    const invalidToken = jwt.sign(
+      { id: new mongoose.Types.ObjectId() },
+      process.env.JWT_SECRET || "secret"
+    );
+    const res = await request(app)
+      .put("/api/update-details")
+      .set("Authorization", `Bearer ${invalidToken}`)
+      .send({ name: "GhostUser" });
+    expect(res.statusCode).toBe(404);
+    expect(res.body.message).toBe("User not found");
+  });
+
+  it("should fail to change password when fields are empty", async () => {
+    const res = await request(app).put("/api/change-password").send({
+      email: "",
+      new_password: "",
+      confirm_password: "",
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.body.message).toBe("All fields are required");
+  });
+
+
+  
 });
