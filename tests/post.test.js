@@ -63,13 +63,17 @@ describe("Post Controller Tests", () => {
     expect(res.body.message).toBe("Server error while creating post");
   });
 
+  // ** FIXED: added auth header **
   it("should fetch all posts", async () => {
-    const res = await request(app).get("/api/post");
+    const res = await request(app)
+      .get("/api/post")
+      .set("Authorization", `Bearer ${token}`);
     expect(res.statusCode).toBe(200);
     expect(res.body.message).toBe("Posts fetched successfully");
     expect(Array.isArray(res.body.posts)).toBe(true);
   });
 
+  // ** FIXED: added auth header **
   it("should get a post by ID", async () => {
     const post = await Post.create({
       title: "Single Post",
@@ -79,15 +83,20 @@ describe("Post Controller Tests", () => {
       user: userId,
     });
 
-    const res = await request(app).get(`/api/post/${post._id}`);
+    const res = await request(app)
+      .get(`/api/post/${post._id}`)
+      .set("Authorization", `Bearer ${token}`);
     expect(res.statusCode).toBe(200);
     expect(res.body.message).toBe("Post fetched successfully");
     expect(res.body.post.title).toBe("Single Post");
   });
 
+  // ** FIXED: added auth header **
   it("should return 404 when post ID does not exist", async () => {
     const fakeId = new mongoose.Types.ObjectId();
-    const res = await request(app).get(`/api/post/${fakeId}`);
+    const res = await request(app)
+      .get(`/api/post/${fakeId}`)
+      .set("Authorization", `Bearer ${token}`);
     expect(res.statusCode).toBe(404);
     expect(res.body.message).toBe("Post not found");
   });
@@ -180,5 +189,102 @@ describe("Post Controller Tests", () => {
     });
     expect(res.statusCode).toBe(401);
     expect(res.body.message).toBe("Unauthorized");
+  });
+
+  it("should fail to create a post without required fields", async () => {
+    const res = await request(app)
+      .post("/api/post")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        title: "Incomplete Post",
+        // missing description, image, skin_type
+      });
+    expect(res.statusCode).toBe(500);
+    expect(res.body.message).toBe("Server error while creating post");
+  });
+
+  it("should fetch posts filtered by skin_type query", async () => {
+    await Post.create([
+      {
+        title: "Oily Skin Post",
+        description: "Description 1",
+        image: "image1.jpg",
+        skin_type: "Oily",
+        user: userId,
+      },
+      {
+        title: "Dry Skin Post",
+        description: "Description 2",
+        image: "image2.jpg",
+        skin_type: "Dry",
+        user: userId,
+      },
+    ]);
+
+    const res = await request(app)
+      .get("/api/post")
+      .query({ type: "Oily" })
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.posts.length).toBeGreaterThan(0);
+    expect(
+      res.body.posts.every((post) =>
+        post.skin_type.toLowerCase().includes("oily")
+      )
+    ).toBe(true);
+  });
+
+  it("should save a post for the authenticated user", async () => {
+    const post = await Post.create({
+      title: "Save this post",
+      description: "Desc",
+      image: "image.jpg",
+      skin_type: "Normal",
+      user: userId,
+    });
+
+    const res = await request(app)
+      .post(`/api/post/save/${post._id}`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.message).toBe("Post saved successfully");
+    expect(res.body.savedPosts).toContainEqual(post._id.toString());
+  });
+
+  it("should not save a non-existent post", async () => {
+    const fakePostId = new mongoose.Types.ObjectId();
+
+    const res = await request(app)
+      .post(`/api/post/save/${fakePostId}`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(404);
+    expect(res.body.message).toBe("Post not found");
+  });
+
+  it("should unsave a saved post successfully", async () => {
+    const post = await Post.create({
+      title: "Unsave this post",
+      description: "Desc",
+      image: "image.jpg",
+      skin_type: "Normal",
+      user: userId,
+    });
+
+    // Save post first
+    await request(app)
+      .post(`/api/post/save/${post._id}`)
+      .set("Authorization", `Bearer ${token}`);
+
+    // Now unsave it
+    const res = await request(app)
+      .delete(`/api/post/unsave/${post._id}`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.message).toBe("Post unsaved successfully");
+    expect(res.body.savedPosts).not.toContainEqual(post._id.toString());
   });
 });
