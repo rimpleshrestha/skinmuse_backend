@@ -91,4 +91,142 @@ describe("Comment Controller Tests", () => {
     expect(res.statusCode).toBe(200);
     expect(res.body.message).toBe("Comment deleted successfully");
   });
+
+  it("should fail to create comment without authorization", async () => {
+    const res = await request(app)
+      .post(`/api/comments/${postId}`)
+      .send({ comment: "Unauthorized comment" });
+    expect(res.statusCode).toBe(401);
+    expect(res.body.message).toBe("Unauthorized");
+  });
+
+  it("should fail to create comment with empty body", async () => {
+    const res = await request(app)
+      .post(`/api/comments/${postId}`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({});
+    expect(res.statusCode).toBe(500); // because validation fails internally
+    expect(res.body.message).toBe("Server error while creating comment");
+  });
+
+  it("should return 404 for getting non-existent comment", async () => {
+    const fakeId = new mongoose.Types.ObjectId();
+    const res = await request(app)
+      .get(`/api/comments/${fakeId}`)
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.statusCode).toBe(404);
+    expect(res.body.message).toBe("Comment not found");
+  });
+
+  it("should return 404 for updating non-existent comment", async () => {
+    const fakeId = new mongoose.Types.ObjectId();
+    const res = await request(app)
+      .put(`/api/comments/${fakeId}`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ comment: "No comment here" });
+    expect(res.statusCode).toBe(404);
+    expect(res.body.message).toBe("Comment not found or not owned by user");
+  });
+
+  it("should return 404 for deleting non-existent comment", async () => {
+    const fakeId = new mongoose.Types.ObjectId();
+    const res = await request(app)
+      .delete(`/api/comments/${fakeId}`)
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.statusCode).toBe(404);
+    expect(res.body.message).toBe("Comment not found or not owned by user");
+  });
+
+  it("should get comments by postId successfully", async () => {
+    // First create comment
+    const created = await request(app)
+      .post(`/api/comments/${postId}`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ comment: "Post specific comment" });
+    expect(created.statusCode).toBe(201);
+
+    const res = await request(app)
+      .get(`/api/comments/post/${postId}`)
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.statusCode).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.length).toBeGreaterThan(0);
+  });
+
+  it("should fail to get comments by postId without authorization", async () => {
+    const res = await request(app).get(`/api/comments/post/${postId}`);
+    expect(res.statusCode).toBe(401);
+    expect(res.body.message).toBe("Unauthorized");
+  });
+
+  it("should prevent updating comment owned by another user", async () => {
+    // Create comment with existing user
+    const created = await request(app)
+      .post(`/api/comments/${postId}`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ comment: "Owned by original user" });
+    const commentId = created.body._id;
+
+    // create second user
+    const otherUser = await User.create({
+      email: `otheruser_${Date.now()}@example.com`,
+      password: await encryptPassword("pass123"),
+    });
+    const otherToken = jwt.sign(
+      { id: otherUser._id },
+      process.env.JWT_SECRET || "secret"
+    );
+
+    const res = await request(app)
+      .put(`/api/comments/${commentId}`)
+      .set("Authorization", `Bearer ${otherToken}`)
+      .send({ comment: "Attempt unauthorized update" });
+    expect(res.statusCode).toBe(404);
+    expect(res.body.message).toBe("Comment not found or not owned by user");
+  });
+
+  it("should prevent deleting comment owned by another user", async () => {
+    // Create comment with original user
+    const created = await request(app)
+      .post(`/api/comments/${postId}`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ comment: "Delete by wrong user" });
+    const commentId = created.body._id;
+
+    // create another user
+    const anotherUser = await User.create({
+      email: `anotheruser_${Date.now()}@example.com`,
+      password: await encryptPassword("pass123"),
+    });
+    const anotherToken = jwt.sign(
+      { id: anotherUser._id },
+      process.env.JWT_SECRET || "secret"
+    );
+
+    const res = await request(app)
+      .delete(`/api/comments/${commentId}`)
+      .set("Authorization", `Bearer ${anotherToken}`);
+    expect(res.statusCode).toBe(404);
+    expect(res.body.message).toBe("Comment not found or not owned by user");
+  });
+
+  it("should return empty array if no comments exist for user", async () => {
+    // new user with no comments
+    const newUser = await User.create({
+      email: `nocomments_${Date.now()}@example.com`,
+      password: await encryptPassword("pass123"),
+    });
+    const newToken = jwt.sign(
+      { id: newUser._id },
+      process.env.JWT_SECRET || "secret"
+    );
+
+    const res = await request(app)
+      .get("/api/comments")
+      .set("Authorization", `Bearer ${newToken}`);
+    expect(res.statusCode).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.length).toBe(0);
+  });
+
 });
